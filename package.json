@@ -1,0 +1,25 @@
+{
+	"name": "request-template-cli",
+	"version": "1.0.0",
+	"main": "index.js",
+	"type": "module",
+	"scripts": {
+		"build": "tsup",
+		"build:watch": "tsup --watch",
+        "build:run": "tsup && node ./dist/index.js",
+		"start": "node ./dist/index.js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"devDependencies": {
+		"@types/node": "^24.9.2",
+		"terser": "^5.44.0",
+		"tsup": "^8.5.0",
+		"typescript": "^5.9.3"
+	},
+	"dependencies": {
+		"commander": "^14.0.2"
+	}
+}
