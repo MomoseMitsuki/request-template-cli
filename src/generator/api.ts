@@ -73,5 +73,8 @@ export const generateAPI = async (apis: Array<FormatAPI>) => {
 	await fs.promises.writeFile(path.resolve(ROOTPATH, "request-bus/template/index.ts"), indexFile, {
 		encoding: "utf-8",
 	});
+	await fs.promises.writeFile(path.resolve(ROOTPATH, "request-bus/index.ts"), 'export * from "./template', {
+		encoding: "utf-8",
+	});
 	console.log("生成 ts 接口文件成功");
 };
