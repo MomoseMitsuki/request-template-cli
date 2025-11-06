@@ -8,7 +8,7 @@ export default defineConfig({
 	shims: false,
 	splitting: false,
 	sourcemap: true,
-	minify: false,
+	minify: "terser",
 	target: "node16",
 	outDir: "dist",
 });

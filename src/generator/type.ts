@@ -5,11 +5,18 @@ import { EventEmitter } from "../utils";
 
 const ROOTPATH = process.cwd();
 const FileMap: FileMap = new Map();
-
-export const emitter = new EventEmitter<"Ref">();
+export const TsMap = new Map<string, Set<string>>();
+export const emitter = new EventEmitter<"Ref" | "TsRef">();
 
 emitter.on("Ref", (importType: string, toFile: string) => {
 	FileMap.get(toFile)!.import.add(importType);
+});
+
+emitter.on("TsRef", (importType: string, TsFile: string) => {
+	if (!TsMap.has(TsFile)) {
+		TsMap.set(TsFile, new Set());
+	}
+	TsMap.get(TsFile)!.add(importType);
 });
 
 export const generateTypes = async () => {
@@ -25,7 +32,8 @@ export const generateTypes = async () => {
 	let result = "";
 	for (const name in schemas) {
 		const schema = schemas[name];
-		const folder = schema["x-apifox-folder"] || "default"; // 没有目录文件默认放 default.d.ts
+		let folder = schema["x-apifox-folder"] || "default"; // 没有目录文件默认放 default.d.ts
+		folder += ".d.ts";
 		if (!FileMap.has(folder)) {
 			FileMap.set(folder, {
 				import: new Set(),
@@ -57,17 +65,14 @@ export const generateTypes = async () => {
 };
 
 export const generateFile = async () => {
-	await fs.promises.rm(path.resolve(ROOTPATH, "request-bus", "@types"), {
-		force: true,
-		recursive: true,
-	});
-	await fs.promises.mkdir(path.resolve(ROOTPATH, "request-bus", "@types"));
-
 	let indexFile = "";
 	FileMap.forEach(async (typeMap, fileName) => {
-		console.log(`🚀: 正在生成${fileName}.d.ts 类型文件...`);
+		console.log(`正在生成 ${fileName} 类型文件...`);
 		let result = "";
-		indexFile += 'export * from "./' + fileName + '"\n';
+		indexFile +=
+			'export * from "./' +
+			fileName.substring(0, fileName.length - 5) +
+			'"\n';
 		typeMap.import.forEach((importName) => {
 			if (typeMap.types.has(importName)) {
 				typeMap.import.delete(importName);
@@ -82,21 +87,21 @@ export const generateFile = async () => {
 					"import type { " +
 					info[fileName].join(", ") +
 					'} from "./' +
-					fileName +
+					fileName.substring(0, fileName.length - 5) +
 					'"\n';
 			}
 			result += imports + "\n";
 		}
 		result += typeMap.content;
 		await fs.promises.writeFile(
-			path.resolve(ROOTPATH, "request-bus", "@types", `${fileName}.d.ts`),
+			path.resolve(ROOTPATH, "request-bus", "@types", `${fileName}`),
 			result,
 			{
 				encoding: "utf-8",
 			}
 		);
 	});
-	console.log(`🚀: 正在生成index.d.ts 类型文件...`);
+	console.log(`正在导入进 index.d.ts 文件...`);
 	await fs.promises.writeFile(
 		path.resolve(ROOTPATH, "request-bus", "@types", `index.d.ts`),
 		indexFile,
@@ -104,7 +109,7 @@ export const generateFile = async () => {
 			encoding: "utf-8",
 		}
 	);
-	console.log("✅: 生成.d.ts类型文件成功");
+	console.log("生成 .d.ts 类型文件成功");
 };
 
 const generateImportType = (

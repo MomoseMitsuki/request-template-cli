@@ -12,15 +12,6 @@ const loopPrint = (str: string, loop: number = 1): string => {
 	return result;
 };
 
-/**
- *
- * @param obj 解析的对象
- * @param required 必须携带的参数
- * @param level 嵌套的层级
- * @param fileName 当前类型所处的文件目录
- * @returns 一个格式化好的对象类型
- * @description 传入一个 schema 的 properties, 将其转换为TS类型字符串并返回
- */
 export const parseObject = (
 	obj: { [key: string]: any },
 	required: Array<string> = [],
@@ -40,7 +31,6 @@ export const parseObject = (
 	return result;
 };
 
-// 分析数组类型
 export const parseArray = (
 	arr: { [key: string]: any },
 	level = 0,
@@ -53,7 +43,6 @@ export const parseArray = (
 	return result;
 };
 
-// 分析联合类型和交叉类型
 export const parseUnion = (
 	obj: { [key: string]: any },
 	level = 0,
@@ -71,11 +60,11 @@ export const parseUnion = (
 
 // 分析一个类型(具体情况具体分析)
 export const parseType = (
-	obj: { [key: string]: any },
+	schema: { [key: string]: any },
 	level = 0,
-	fileName: string
+	fileName = ""
 ): string => {
-	let type = obj.type;
+	let type = schema.type;
 	let isNull = false;
 	// 处理类型 允许 为 null
 	if (Array.isArray(type) && type[1] === "null") {
@@ -84,22 +73,31 @@ export const parseType = (
 	}
 	if (type === "object") {
 		// 处理类型是对象的情况 object
-		type = parseObject(obj.properties, obj.required, level + 1, fileName);
+		type = parseObject(
+			schema.properties,
+			schema.required,
+			level + 1,
+			fileName
+		);
 	} else if (type === "array") {
 		// 处理类型是数组的情况 array
-		type = parseArray(obj, level, fileName);
-	} else if (!type && Object.hasOwn(obj, "$ref")) {
+		type = parseArray(schema, level, fileName);
+	} else if (!type && Object.hasOwn(schema, "$ref")) {
 		// 处理引用数据类型的情况 $ref
-		const index = obj.$ref.lastIndexOf("/");
-		type = obj.$ref.substring(index + 1, obj.$ref.length);
+		const index = schema.$ref.lastIndexOf("/");
+		type = schema.$ref.substring(index + 1, schema.$ref.length);
 		// 记录引用,后续处理
-		emitter.emit("Ref", type, fileName);
+		if (fileName !== "" && fileName.lastIndexOf(".d.ts") !== -1) {
+			emitter.emit("Ref", type, fileName);
+		} else if (fileName.lastIndexOf(".ts") !== -1) {
+			emitter.emit("TsRef", type, fileName);
+		}
 	} else if (
 		!type &&
-		(Object.hasOwn(obj, "allOf") || Object.hasOwn(obj, "anyOf"))
+		(Object.hasOwn(schema, "allOf") || Object.hasOwn(schema, "anyOf"))
 	) {
 		// 联合类型 交叉类型 allOf -> & anyOf -> |
-		type = parseUnion(obj, level, fileName);
+		type = parseUnion(schema, level, fileName);
 	} else if (type === "integer") {
 		// 普通类型 integer -> number
 		type = "number";
